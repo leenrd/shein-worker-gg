@@ -6,9 +6,11 @@ const SuperHeader = () => {
     <header className="my-12 flex items-start justify-between">
       <div>
         <h1 className="mb-4 tracking-tight leading-5 text-3xl font-semibold">
-          Worker API for Express.js
+          API Worker for Express.js
         </h1>
-        <span>Leenard Zarate</span>
+        <span>
+          A robust controller / service infrastructure in api development.
+        </span>
       </div>
       <div className="flex items-start justify-between gap-4">
         <span>
