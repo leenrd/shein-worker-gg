@@ -1,5 +1,5 @@
 interface Step<I> {
-  create: <O>(
+  step: <O>(
     action: (prevResult: Awaited<I>, req: any) => O | Promise<O>
   ) => Step<O>;
   finally: (action: (prevResult: Awaited<I>, req: any) => any) => any;
@@ -16,17 +16,17 @@ export class ControllerFlow {
   }
 
   createController = (setupStep: (step: Step<any>) => void) => {
-    const step: Step<any> = {
-      create: <O>(action: <I>(prevResult: I, req: any) => O | Promise<O>) => {
+    const create: Step<any> = {
+      step: <O>(action: <I>(prevResult: I, req: any) => O | Promise<O>) => {
         this.steps.push(action);
-        return step as Step<O>;
+        return create as Step<O>;
       },
       finally: (action: <I>(prevResult: I, req: any) => any) => {
         this.steps.push(action);
       },
     };
 
-    setupStep(step);
+    setupStep(create);
 
     const handler = async (req: any, res: any) => {
       const stepIndex = Number(req.query.step) || 0;

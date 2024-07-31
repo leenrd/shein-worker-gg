@@ -1,0 +1,17 @@
+name: worker-flow-ci
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  no-push-to-main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if push is to main
+        id: check_branch
+        run: echo ::set-output name=is_main::${GITHUB_REF == 'refs/heads/main'}
+      - name: Exit if push is to main
+        if: steps.check_branch.outputs.is_main == 'true'
+        run: exit 78
