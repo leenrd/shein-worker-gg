@@ -1,9 +1,9 @@
-name: Protect Main Branch
+name: Protect dev Branch
 
 on:
   push:
     branches:
-      - main
+      - dev
 
 jobs:
   no-push:
