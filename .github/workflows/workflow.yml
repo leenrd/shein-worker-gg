@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Fail if trying to push to main
+      - name: Fail if trying to push to dev
         run: |
-          echo "Pushing directly to the main branch is not allowed. test commit"
+          echo "Pushing directly to the dev branch is not allowed. test commit"
           exit 1
