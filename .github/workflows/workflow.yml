@@ -12,5 +12,5 @@ jobs:
     steps:
       - name: Fail if trying to push to main
         run: |
-          echo "Pushing directly to the main branch is not allowed."
+          echo "Pushing directly to the main branch is not allowed. test commit"
           exit 1
