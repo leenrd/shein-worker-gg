@@ -1,4 +1,4 @@
-name: Protect Main Branch
+name: Protect Dev Branch
 
 on:
   push:
