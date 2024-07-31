@@ -1,66 +1,97 @@
-interface Step<T> {
-  create: <U>(action: (prevResult: T) => Promise<U> | U) => Step<U>;
-  finally: (action: (prevResult: T) => Promise<any> | any) => void;
+interface Step<I> {
+  create: <O>(
+    action: (prevResult: Awaited<I>, req: any) => O | Promise<O>
+  ) => Step<O>;
+  finally: (action: (prevResult: Awaited<I>, req: any) => any) => any;
 }
 
-export class CnCore {
-  private steps: Array<(prevResult: any) => Promise<any> | any> = [];
-  private maxRetryAttempts = 2;
-  private timeout = 5000; // 5 seconds timeout
+type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
-  createController(setup: (step: Step<any>) => void) {
+export class ControllerFlow {
+  private steps: Function[] = [];
+  private baseUrl: string;
+
+  constructor(baseUrl: string) {
+    this.baseUrl = baseUrl;
+  }
+
+  createController = (setupStep: (step: Step<any>) => void) => {
     const step: Step<any> = {
-      create: <U>(action: (prevResult: any) => Promise<U> | U) => {
+      create: <O>(action: <I>(prevResult: I, req: any) => O | Promise<O>) => {
         this.steps.push(action);
-        return step as Step<U>;
+        return step as Step<O>;
       },
-      finally: (action: (prevResult: any) => Promise<any> | any) => {
+      finally: (action: <I>(prevResult: I, req: any) => any) => {
         this.steps.push(action);
       },
     };
 
-    setup(step);
+    setupStep(step);
+
+    const handler = async (req: any, res: any) => {
+      const stepIndex = Number(req.query.step) || 0;
+
+      if (stepIndex >= this.steps.length) {
+        return res.status(200).send("All tasks completed successfully");
+      }
+
+      try {
+        if (stepIndex === 0) {
+          await this.executeStep(
+            req.path,
+            req.method as HttpMethod,
+            0,
+            req.body || req.query
+          );
+          return res.status(202).send("Workflow started");
+        } else {
+          const result = await this.steps[stepIndex](
+            req.body || req.query,
+            req
+          );
+
+          if (stepIndex < this.steps.length - 1) {
+            await this.executeStep(
+              req.path,
+              req.method as HttpMethod,
+              stepIndex + 1,
+              result
+            );
+          }
+
+          return res.status(200).send("Step completed");
+        }
+      } catch (error) {
+        console.error(`Error in step ${stepIndex}:`, error);
+        return res.status(500).json({ error: "Workflow error" });
+      }
+    };
 
     return {
-      POST: async (req: any, res: any) => {
-        try {
-          const result = await this.executeSteps();
-          res.status(200).json(result);
-        } catch (error) {
-          res.status(500).json({ error: error.message });
-        }
-      },
+      GET: handler,
+      POST: handler,
+      PUT: handler,
+      DELETE: handler,
+      PATCH: handler,
     };
-  }
+  };
 
-  private async executeSteps() {
-    let result: any = undefined;
-    for (const step of this.steps) {
-      result = await this.retryStep(() => step(result));
-    }
-    return result;
-  }
-
-  private async retryStep(
-    step: () => Promise<any> | any,
-    attempt: number = 0
-  ): Promise<any> {
-    try {
-      const result = await Promise.race([
-        Promise.resolve(step()),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Timeout")), this.timeout)
-        ),
-      ]);
-
-      return result;
-    } catch (error) {
-      if (error.message === "Timeout" && attempt < this.maxRetryAttempts) {
-        console.log(`Retrying step, attempt ${attempt + 1}`);
-        return this.retryStep(step, attempt + 1);
-      } else {
-        throw error;
-      }
-    }
+  private async executeStep(
+    path: string,
+    method: HttpMethod,
+    step: number,
+    body: any
+  ) {
+    setTimeout(() => {
+      fetch(`${this.baseUrl}${path}?step=${step}`, {
+        method: method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: method !== "GET" ? JSON.stringify(body) : undefined,
+      }).catch((error) =>
+        console.error(`Error executing step ${step}:`, error)
+      );
+    }, 0);
   }
 }
