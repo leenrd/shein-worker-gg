@@ -1,4 +1,4 @@
-name: worker-flow-ci
+name: Protect Main Branch
 
 on:
   push:
